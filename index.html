@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Einstein Hub</title>
+  
+  <!-- Google Fonts & Canvas Confetti -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Firebase App & Database SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #f4f4f9;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --border-color: #cccccc;
+      --item-bg: #f8f9fa;
+      --primary-color: #28a745;
+      --primary-hover: #218838;
+      --announcement-bg: #e3f2fd;
+      --announcement-border: #2196f3;
+      --admin-bg: #fff3cd;
+      --admin-border: #ffc107;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --text-color: #e0e0e0;
+      --border-color: #444444;
+      --item-bg: #2d2d2d;
+      --primary-color: #2e7d32;
+      --primary-hover: #1b5e20;
+      --announcement-bg: #1a237e;
+      --announcement-border: #3f51b5;
+      --admin-bg: #3e2723;
+      --admin-border: #ffa000;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 15px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    h1 { font-size: 1.8rem; }
+    h2 { font-size: 1.3rem; margin-bottom: 12px; }
+    h3 { font-size: 1.1rem; margin: 15px 0 10px; }
+
+    .user-info { display: flex; align-items: center; gap: 10px; }
+
+    .theme-btn, .logout-btn {
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.85rem;
+    }
+
+    .logout-btn { background-color: #dc3545; color: white; border: none; }
+
+    .section {
+      background: var(--card-bg);
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
+    .announcement { background-color: var(--announcement-bg); border-left: 5px solid var(--announcement-border); }
+    .leaderboard { background-color: #fff8e1; border-left: 5px solid #ffc107; }
+    .admin-panel { background-color: var(--admin-bg); border-left: 5px solid var(--admin-border); }
+
+    /* CLEAN AUTO-ONLY QUOTE SLIDER STYLES */
+    .quote-card {
+      background-color: #e8f5e9;
+      border-left: 5px solid #4caf50;
+      padding: 18px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    [data-theme="dark"] .quote-card { background-color: #1b5e20; }
+
+    .quote-slider {
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .quote-text {
+      font-style: italic;
+      font-size: 1rem;
+      transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
+      opacity: 1;
+      transform: translateX(0);
+      text-align: center;
+      margin: 0;
+    }
+
+    /* Sliding animations for seamless right-to-left auto movement */
+    .quote-text.exit-left {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+
+    .quote-text.enter-right {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+
+    form { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+    label { font-weight: 500; font-size: 0.9rem; }
+
+    input, textarea, select, button {
+      font-family: 'Poppins', sans-serif;
+      padding: 12px;
+      font-size: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      width: 100%;
+      outline: none;
+      background-color: var(--card-bg);
+      color: var(--text-color);
+    }
+
+    button.submit-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.2s ease;
+      margin-top: 5px;
+    }
+
+    button.submit-btn:hover { background-color: var(--primary-hover); }
+
+    .auth-tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+    .auth-tab {
+      flex: 1; padding: 10px; text-align: center; background: var(--item-bg);
+      border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: 600;
+    }
+    .auth-tab.active { background: var(--announcement-border); color: white; border-color: var(--announcement-border); }
+
+    .filter-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .filter-btn {
+      padding: 6px 12px; font-size: 0.85rem; border-radius: 4px; cursor: pointer;
+      border: 1px solid var(--border-color); background: var(--item-bg); width: auto;
+    }
+    .filter-btn.active { background: var(--announcement-border); color: white; border-color: var(--announcement-border); }
+
+    ul { list-style-type: none; }
+    li {
+      background: var(--item-bg); border: 1px solid var(--border-color);
+      margin-bottom: 8px; padding: 12px; border-radius: 6px; word-break: break-word;
+      display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+
+    li.completed .task-text { text-decoration: line-through; opacity: 0.6; }
+
+    .badge {
+      padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;
+      color: white; display: inline-block; margin-right: 5px;
+    }
+
+    .badge-high { background-color: #dc3545; }
+    .badge-medium { background-color: #ffc107; color: #000; }
+    .badge-low { background-color: #28a745; }
+    .badge-subject { background-color: #17a2b8; }
+    .badge-urgent { background-color: #ff5722; animation: blink 1.5s infinite; }
+
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+    .item-content { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 250px; }
+    .actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    .action-btn {
+      background: none; border: 1px solid var(--border-color); cursor: pointer;
+      font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; width: auto;
+    }
+
+    .delete-btn { color: #dc3545; border-color: #dc3545; }
+    .edit-btn { color: #0d6efd; border-color: #0d6efd; }
+
+    .hidden { display: none !important; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid var(--border-color); padding: 8px; text-align: left; font-size: 0.85rem; }
+    th { background-color: var(--item-bg); }
+
+    .empty-state { text-align: center; padding: 20px; color: #777; font-style: italic; }
+
+    .resource-links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .resource-card {
+      flex: 1; min-width: 140px; padding: 12px; background: var(--item-bg);
+      border: 1px solid var(--border-color); border-radius: 8px; text-align: center;
+      text-decoration: none; color: var(--text-color); font-weight: 600; font-size: 0.9rem;
+    }
+
+    @media (min-width: 600px) {
+      body { padding: 30px; }
+      h1 { font-size: 2.2rem; }
+      .section { padding: 25px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-bar">
+      <h1>Einstein Hub</h1>
+      <div class="user-info">
+        <button class="theme-btn" id="theme-toggle">🌙 Dark Mode</button>
+        <span id="user-display" class="hidden"></span>
+        <button id="logout-btn" class="logout-btn hidden" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+
+    <!-- SECRET ADMIN DASHBOARD -->
+    <div id="admin-section" class="section admin-panel hidden">
+      <h2>Admin Controls</h2>
+      <p>Manage accounts and submissions for Class 7-Einstein.</p>
+      
+      <h3>Registered Accounts</h3>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Username</th>
+              <th>Password (Hashed)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-user-table"></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="clearAllTasks()" class="logout-btn" style="width: auto;">Delete All Homework</button>
+        <button onclick="clearAllShouts()" class="logout-btn" style="width: auto;">Delete All Shout-outs</button>
+        <button onclick="closeAdminPanel()" class="theme-btn" style="width: auto;">Exit Admin View</button>
+      </div>
+    </div>
+
+    <!-- AUTH SECTION -->
+    <div id="auth-section" class="section">
+      <div class="auth-tabs">
+        <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Log In</div>
+        <div class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</div>
+      </div>
+
+      <form id="login-form">
+        <div>
+          <label for="login-username">Username:</label>
+          <input type="text" id="login-username" placeholder="Enter your username" required>
+        </div>
+        <div>
+          <label for="login-password">Password:</label>
+          <input type="password" id="login-password" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="submit-btn">Log In</button>
+      </form>
+
+      <form id="signup-form" class="hidden">
+        <div>
+          <label for="signup-name">Full Name:</label>
+          <input type="text" id="signup-name" placeholder="e.g. Juan Dela Cruz" required>
+        </div>
+        <div>
+          <label for="signup-username">Choose a Username:</label>
+          <input type="text" id="signup-username" placeholder="e.g. juandelacruz2001" required>
+        </div>
+        <div>
+          <label for="signup-password">Choose a Password:</label>
+          <input type="password" id="signup-password" placeholder="Create a password" required>
+        </div>
+        <button type="submit" class="submit-btn">Create Account</button>
+      </form>
+    </div>
+
+    <!-- MAIN HUB CONTENT -->
+    <div id="main-content" class="hidden">
+      
+      <!-- Announcement & Pure Auto Sliding Quote Section -->
+      <div class="section announcement">
+        <h2>📢 Welcome, 7-Einstein!</h2>
+        <p>Welcome to our class hub! Track homework, collaborate and cheer for your classmates below.</p>
+      </div>
+
+      <!-- AUTOMATIC-ONLY SLIDING QUOTE CONTAINER -->
+      <div class="quote-card" id="quote-container">
+        <div class="quote-slider">
+          <p id="daily-quote" class="quote-text">"Loading motivational quote..."</p>
+        </div>
+      </div>
+
+      <!-- Leaderboard Section -->
+      <div class="section leaderboard">
+        <h2>🏆 Classmate Leaderboard</h2>
+        <ol id="leaderboard-list" style="margin-left: 20px;"></ol>
+      </div>
+
+      <!-- Section 1: Homework List -->
+      <div class="section">
+        <h2>Homework List <span id="task-counter" style="font-size: 0.9rem; color: #666;">(0 Pending)</span></h2>
+        
+        <form id="hw-form">
+          <div>
+            <label for="homework-subject">Subject:</label>
+            <select id="homework-subject">
+              <option value="Filipino">Filipino</option>
+              <option value="MAPEH">MAPEH</option>
+              <option value="Science">Science</option>
+              <option value="AP">AP</option>
+              <option value="English">English</option>
+              <option value="VE/ESP">VE/ESP</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="EnviSci">EnviSci</option>
+              <option value="Research">Research</option>
+              <option value="Robotics">Robotics</option>
+              <option value="Khan Academy">Khan Academy</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="homework-title">Homework Title:</label>
+            <input type="text" id="homework-title" placeholder="e.g. Page 42 Problems 1-10" required>
+          </div>
+
+          <div>
+            <label for="homework-priority">Priority Level:</label>
+            <select id="homework-priority">
+              <option value="Low">🟢 Low Priority</option>
+              <option value="Medium">🟡 Medium Priority</option>
+              <option value="High">🔴 High Priority</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="due-date">Due Date:</label>
+            <input type="date" id="due-date" required>
+          </div>
+
+          <div>
+            <label for="homework-file">Link or Details:</label>
+            <input type="text" id="homework-file" placeholder="Paste link or task details" required>
+          </div>
+
+          <button type="submit" id="hw-submit-btn" class="submit-btn">Submit Homework</button>
+        </form>
+
+        <h3 style="margin-top: 25px;">Submitted Tasks</h3>
+        
+        <!-- Search & Subject Filter -->
+        <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+          <input type="text" id="hw-search" placeholder="🔍 Search tasks..." oninput="renderTasks()" style="flex: 2; min-width: 180px;">
+          <select id="hw-filter-subject" onchange="renderTasks()" style="flex: 1; min-width: 140px;">
+            <option value="all">All Subjects</option>
+            <option value="Filipino">Filipino</option>
+            <option value="MAPEH">MAPEH</option>
+            <option value="Science">Science</option>
+            <option value="AP">AP</option>
+            <option value="English">English</option>
+            <option value="VE/ESP">VE/ESP</option>
+            <option value="Mathematics">Mathematics</option>
+            <option value="EnviSci">EnviSci</option>
+            <option value="Research">Research</option>
+            <option value="Robotics">Robotics</option>
+            <option value="Khan Academy">Khan Academy</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <button class="filter-btn active" id="filter-all" onclick="setTaskStatusFilter('all')">All</button>
+          <button class="filter-btn" id="filter-pending" onclick="setTaskStatusFilter('pending')">Pending</button>
+          <button class="filter-btn" id="filter-completed" onclick="setTaskStatusFilter('completed')">Completed</button>
+        </div>
+        <ul id="hw-list"></ul>
+      </div>
+
+      <!-- Section 2: Class Shout-Out Form -->
+      <div class="section">
+        <h2>Class Shout-Out Form</h2>
+        <form id="shout-form">
+          <div>
+            <label for="shoutout-to">Shout-Out To (Classmate Name):</label>
+            <input type="text" id="shoutout-to" placeholder="Who are you cheering for?" required>
+          </div>
+
+          <div>
+            <label for="category">Category:</label>
+            <select id="category">
+              <option value="Great Teamwork">🤝 Great Teamwork</option>
+              <option value="Helping Hand">❤️ Helping Hand</option>
+              <option value="Hard Worker">⭐ Hard Worker</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="message">Positive Message:</label>
+            <textarea id="message" rows="3" placeholder="Write a nice note..." required></textarea>
+          </div>
+
+          <button type="submit" class="submit-btn">Send Shout-Out</button>
+        </form>
+
+        <h3>Recent Shout-Outs</h3>
+        <ul id="shout-list"></ul>
+      </div>
+
+      <!-- Section 3: Study Resources & Quick Links -->
+      <div class="section">
+        <h2>📌 Class Resources</h2>
+        <div class="resource-links">
+          <a href="https://drive.google.com" target="_blank" class="resource-card">📁 Class Drive</a>
+          <a href="https://khanacademy.org" target="_blank" class="resource-card">💡 Khan Academy</a>
+          <a href="https://canva.com" target="_blank" class="resource-card">🎨 Canva Projects</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // --- SECURITY UTILITY: SHA-256 HASH ---
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // --- FULLY AUTOMATIC SLIDING EINSTEIN QUOTES ---
+    const quotes = [
+      "\"Imagination is more important than knowledge.\" – Albert Einstein",
+      "\"Life is like riding a bicycle. To keep your balance, you must keep moving.\" – Albert Einstein",
+      "\"Anyone who has never made a mistake has never tried anything new.\" – Albert Einstein",
+      "\"Learn from yesterday, live for today, hope for tomorrow.\" – Albert Einstein",
+      "\"The important thing is not to stop questioning.\" – Albert Einstein",
+      "\"In the middle of difficulty lies opportunity.\" – Albert Einstein"
+    ];
+
+    let currentQuoteIndex = 0;
+    const SLIDE_INTERVAL_TIME = 4500; // 4.5 seconds per slide
+    let quoteInterval;
+    let isAnimating = false;
+
+    function autoNextQuote() {
+      if (isAnimating) return;
+      isAnimating = true;
+
+      const quoteElement = document.getElementById('daily-quote');
+
+      // Slide old quote out to the left
+      quoteElement.className = 'quote-text exit-left';
+
+      setTimeout(() => {
+        currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+        quoteElement.textContent = quotes[currentQuoteIndex];
+        
+        // Prepare new quote to enter from the right
+        quoteElement.className = 'quote-text enter-right';
+
+        // Trigger smooth slide in
+        setTimeout(() => {
+          quoteElement.className = 'quote-text';
+          isAnimating = false;
+        }, 50);
+      }, 400);
+    }
+
+    function startQuoteTimer() {
+      quoteInterval = setInterval(autoNextQuote, SLIDE_INTERVAL_TIME);
+    }
+
+    // Pause animation on mouse hover so users can read comfortably
+    const quoteCard = document.getElementById('quote-container');
+    quoteCard.addEventListener('mouseenter', () => clearInterval(quoteInterval));
+    quoteCard.addEventListener('mouseleave', startQuoteTimer);
+
+    // Initialize initial quote and start auto loop
+    document.getElementById('daily-quote').textContent = quotes[0];
+    startQuoteTimer();
+
+    // --- FIREBASE CONFIGURATION ---
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    let db = null;
+    let isFirebaseActive = false;
+    const ADMIN_PASS = "admin123";
+
+    try {
+      if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        isFirebaseActive = true;
+      }
+    } catch(e) {
+      console.log("Using Local Storage mode.");
+    }
+
+    // --- THEME ---
+    const themeBtn = document.getElementById('theme-toggle');
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.body.getAttribute('data-theme') === 'dark';
+      document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      themeBtn.textContent = isDark ? '🌙 Dark Mode' : '☀️ Light Mode';
+    });
+
+    // --- STATE MANAGEMENT ---
+    let users = JSON.parse(localStorage.getItem('hub_users')) || [];
+    let currentUser = JSON.parse(localStorage.getItem('hub_current_user')) || null;
+    let tasks = JSON.parse(localStorage.getItem('hw_tasks')) || [];
+    let shoutOuts = JSON.parse(localStorage.getItem('shout_outs')) || [];
+    let activeTaskStatusFilter = 'all';
+    let editingTaskIndex = -1;
+
+    function saveData() {
+      localStorage.setItem('hub_users', JSON.stringify(users));
+      localStorage.setItem('hub_current_user', JSON.stringify(currentUser));
+      if (!isFirebaseActive) {
+        localStorage.setItem('hw_tasks', JSON.stringify(tasks));
+        localStorage.setItem('shout_outs', JSON.stringify(shoutOuts));
+      } else {
+        db.ref('users').set(users);
+        db.ref('tasks').set(tasks);
+        db.ref('shoutOuts').set(shoutOuts);
+      }
+    }
+
+    if (isFirebaseActive) {
+      db.ref('users').on('value', (snapshot) => {
+        users = snapshot.val() || [];
+        renderAdminTable();
+      });
+      db.ref('tasks').on('value', (snapshot) => {
+        tasks = snapshot.val() || [];
+        renderTasks();
+      });
+      db.ref('shoutOuts').on('value', (snapshot) => {
+        shoutOuts = snapshot.val() || [];
+        renderShoutOuts();
+        renderLeaderboard();
+      });
+    }
+
+    // --- SECRET TYPING TRIGGER SYSTEM ---
+    const secretCode = "admin";
+    let typedBuffer = "";
+
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      typedBuffer += e.key.toLowerCase();
+      if (typedBuffer.length > secretCode.length) typedBuffer = typedBuffer.slice(-secretCode.length);
+      if (typedBuffer === secretCode) {
+        typedBuffer = "";
+        openAdminPrompt();
+      }
+    });
+
+    function openAdminPrompt() {
+      const pass = prompt('Enter Admin Password:');
+      if (pass === ADMIN_PASS) {
+        document.getElementById('admin-section').classList.remove('hidden');
+        renderAdminTable();
+      } else if (pass !== null) {
+        alert('Incorrect Password!');
+      }
+    }
+
+    function closeAdminPanel() {
+      document.getElementById('admin-section').classList.add('hidden');
+    }
+
+    function renderAdminTable() {
+      const tableBody = document.getElementById('admin-user-table');
+      tableBody.innerHTML = '';
+      users.forEach((u, index) => {
+        const tr = document.createElement('tr');
+        const shortHash = u.password ? u.password.substring(0, 10) + '...' : 'None';
+        tr.innerHTML = `
+          <td>${u.name}</td>
+          <td>${u.username}</td>
+          <td><code>${shortHash}</code></td>
+          <td>
+            <button onclick="resetPass(${index})" style="padding: 2px 6px; font-size:0.75rem;">Reset Pass</button>
+            <button onclick="deleteUser(${index})" style="padding: 2px 6px; font-size:0.75rem; background:#dc3545; color:white;">Delete</button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    async function resetPass(index) {
+      const newPass = prompt(`Enter new password for ${users[index].username}:`);
+      if (newPass) {
+        users[index].password = await hashPassword(newPass);
+        saveData();
+        renderAdminTable();
+        alert('Password updated!');
+      }
+    }
+
+    function deleteUser(index) {
+      if (confirm(`Are you sure you want to delete ${users[index].username}?`)) {
+        users.splice(index, 1);
+        saveData();
+        renderAdminTable();
+      }
+    }
+
+    function clearAllTasks() {
+      if (confirm('Delete all homework items for everyone?')) {
+        tasks = [];
+        saveData();
+        renderTasks();
+      }
+    }
+
+    function clearAllShouts() {
+      if (confirm('Delete all shout-outs for everyone?')) {
+        shoutOuts = [];
+        saveData();
+        renderShoutOuts();
+        renderLeaderboard();
+      }
+    }
+
+    // --- AUTHENTICATION ---
+    function switchAuthTab(tab) {
+      if (tab === 'login') {
+        document.getElementById('tab-login').classList.add('active');
+        document.getElementById('tab-signup').classList.remove('active');
+        document.getElementById('login-form').classList.remove('hidden');
+        document.getElementById('signup-form').classList.add('hidden');
+      } else {
+        document.getElementById('tab-signup').classList.add('active');
+        document.getElementById('tab-login').classList.remove('active');
+        document.getElementById('signup-form').classList.remove('hidden');
+        document.getElementById('login-form').classList.add('hidden');
+      }
+    }
+
+    document.getElementById('signup-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('signup-name').value;
+      const username = document.getElementById('signup-username').value;
+      const rawPassword = document.getElementById('signup-password').value;
+
+      if (users.some(u => u.username === username)) {
+        alert('Username already taken!');
+        return;
+      }
+
+      const hashedPassword = await hashPassword(rawPassword);
+      const newUser = { name, username, password: hashedPassword };
+      users.push(newUser);
+      currentUser = newUser;
+      saveData();
+      checkAuthStatus();
+      this.reset();
+    });
+
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const username = document.getElementById('login-username').value;
+      const rawPassword = document.getElementById('login-password').value;
+      const hashedPassword = await hashPassword(rawPassword);
+
+      const user = users.find(u => u.username === username && u.password === hashedPassword);
+      if (user) {
+        currentUser = user;
+        saveData();
+        checkAuthStatus();
+        this.reset();
+      } else {
+        alert('Invalid username or password!');
+      }
+    });
+
+    function logout() {
+      currentUser = null;
+      saveData();
+      checkAuthStatus();
+    }
+
+    function checkAuthStatus() {
+      const authSection = document.getElementById('auth-section');
+      const mainContent = document.getElementById('main-content');
+      const userDisplay = document.getElementById('user-display');
+      const logoutBtn = document.getElementById('logout-btn');
+
+      if (currentUser) {
+        authSection.classList.add('hidden');
+        mainContent.classList.remove('hidden');
+        userDisplay.classList.remove('hidden');
+        logoutBtn.classList.remove('hidden');
+        userDisplay.textContent = `👋 ${currentUser.name}`;
+        renderTasks();
+        renderShoutOuts();
+        renderLeaderboard();
+      } else {
+        authSection.classList.remove('hidden');
+        mainContent.classList.add('hidden');
+        userDisplay.classList.add('hidden');
+        logoutBtn.classList.add('hidden');
+      }
+    }
+
+    // --- HOMEWORK SYSTEM ---
+    function setTaskStatusFilter(type) {
+      activeTaskStatusFilter = type;
+      document.querySelectorAll('.filter-group .filter-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`filter-${type}`).classList.add('active');
+      renderTasks();
+    }
+
+    function isDueSoon(dueDateStr) {
+      if (!dueDateStr) return false;
+      const dueDate = new Date(dueDateStr);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const diffTime = dueDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 1;
+    }
+
+    function renderTasks() {
+      const hwList = document.getElementById('hw-list');
+      const searchQuery = document.getElementById('hw-search').value.toLowerCase();
+      const subjectFilter = document.getElementById('hw-filter-subject').value;
+      
+      hwList.innerHTML = '';
+      let pendingCount = 0;
+
+      tasks.forEach((task, index) => {
+        if (!task.completed) pendingCount++;
+
+        if (activeTaskStatusFilter === 'completed' && !task.completed) return;
+        if (activeTaskStatusFilter === 'pending' && task.completed) return;
+        if (subjectFilter !== 'all' && task.subject !== subjectFilter) return;
+
+        if (searchQuery) {
+          const textMatch = task.title.toLowerCase().includes(searchQuery) || 
+                            task.file.toLowerCase().includes(searchQuery) ||
+                            task.submittedBy.toLowerCase().includes(searchQuery);
+          if (!textMatch) return;
+        }
+
+        const li = document.createElement('li');
+        if (task.completed) li.classList.add('completed');
+
+        const priorityClass = `badge-${task.priority.toLowerCase()}`;
+        const urgentBadge = (!task.completed && isDueSoon(task.date)) ? `<span class="badge badge-urgent">🔥 DUE SOON</span>` : '';
+        
+        li.innerHTML = `
+          <div class="item-content">
+            <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${index})" style="width: auto;">
+            <span class="task-text">
+              <span class="badge badge-subject">${task.subject}</span>
+              <span class="badge ${priorityClass}">${task.priority}</span>
+              ${urgentBadge}
+              <strong>${task.title}</strong> (Due: ${task.date}) - By ${task.submittedBy} | Details: ${task.file}
+            </span>
+          </div>
+          <div class="actions">
+            <button class="action-btn edit-btn" onclick="editTask(${index})">✏️ Edit</button>
+            <button class="action-btn delete-btn" onclick="deleteTask(${index})">🗑️ Delete</button>
+          </div>
+        `;
+        hwList.appendChild(li);
+      });
+
+      document.getElementById('task-counter').textContent = `(${pendingCount} Pending)`;
+
+      if (hwList.children.length === 0) {
+        hwList.innerHTML = `<div class="empty-state">🎉 No assignments found!</div>`;
+      }
+    }
+
+    document.getElementById('hw-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const taskData = {
+        submittedBy: currentUser.name,
+        subject: document.getElementById('homework-subject').value,
+        title: document.getElementById('homework-title').value,
+        priority: document.getElementById('homework-priority').value,
+        date: document.getElementById('due-date').value,
+        file: document.getElementById('homework-file').value,
+        completed: editingTaskIndex >= 0 ? tasks[editingTaskIndex].completed : false
+      };
+
+      if (editingTaskIndex >= 0) {
+        tasks[editingTaskIndex] = taskData;
+        editingTaskIndex = -1;
+        document.getElementById('hw-submit-btn').textContent = 'Submit Homework';
+      } else {
+        tasks.push(taskData);
+      }
+
+      saveData();
+      renderTasks();
+      this.reset();
+    });
+
+    function editTask(index) {
+      const task = tasks[index];
+      document.getElementById('homework-subject').value = task.subject;
+      document.getElementById('homework-title').value = task.title;
+      document.getElementById('homework-priority').value = task.priority;
+      document.getElementById('due-date').value = task.date;
+      document.getElementById('homework-file').value = task.file;
+      
+      editingTaskIndex = index;
+      document.getElementById('hw-submit-btn').textContent = 'Update Homework Item';
+      window.scrollTo({ top: document.getElementById('hw-form').offsetTop - 20, behavior: 'smooth' });
+    }
+
+    function toggleTask(index) {
+      tasks[index].completed = !tasks[index].completed;
+      if (tasks[index].completed) confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      saveData();
+      renderTasks();
+    }
+
+    function deleteTask(index) {
+      if (confirm('Are you sure you want to delete this assignment?')) {
+        tasks.splice(index, 1);
+        saveData();
+        renderTasks();
+      }
+    }
+
+    // --- SHOUT-OUT & LEADERBOARD SYSTEM ---
+    function renderShoutOuts() {
+      const shoutList = document.getElementById('shout-list');
+      shoutList.innerHTML = '';
+
+      if (shoutOuts.length === 0) {
+        shoutList.innerHTML = `<div class="empty-state">❤️ Be the first to send a shout-out!</div>`;
+        return;
+      }
+
+      shoutOuts.forEach((shout, index) => {
+        const reactions = shout.reactions || { party: 0, clap: 0, star: 0, heart: 0 };
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div class="item-content">
+            <span><strong>${shout.category}</strong> for <strong>${shout.to}</strong>: "${shout.msg}" <small>(From: ${shout.from})</small></span>
+          </div>
+          <div class="actions">
+            <button class="action-btn" onclick="reactShout(${index}, 'party')">🎉 ${reactions.party || 0}</button>
+            <button class="action-btn" onclick="reactShout(${index}, 'clap')">👏 ${reactions.clap || 0}</button>
+            <button class="action-btn" onclick="reactShout(${index}, 'star')">⭐ ${reactions.star || 0}</button>
+            <button class="action-btn" onclick="reactShout(${index}, 'heart')">❤️ ${reactions.heart || 0}</button>
+            <button class="action-btn delete-btn" onclick="deleteShout(${index})">🗑️</button>
+          </div>
+        `;
+        shoutList.appendChild(li);
+      });
+    }
+
+    function renderLeaderboard() {
+      const list = document.getElementById('leaderboard-list');
+      list.innerHTML = '';
+
+      const scores = {};
+      shoutOuts.forEach(s => {
+        const r = s.reactions || {};
+        const totalReactions = (r.party || 0) + (r.clap || 0) + (r.star || 0) + (r.heart || 0);
+        scores[s.to] = (scores[s.to] || 0) + totalReactions + 1;
+      });
+
+      const sorted = Object.keys(scores).sort((a,b) => scores[b] - scores[a]).slice(0, 5);
+
+      if (sorted.length === 0) {
+        list.innerHTML = '<li>No shout-outs recorded yet!</li>';
+        return;
+      }
+
+      sorted.forEach(name => {
+        const li = document.createElement('li');
+        li.style.background = 'none';
+        li.style.border = 'none';
+        li.style.padding = '4px 0';
+        li.innerHTML = `<strong>${name}</strong> - ${scores[name]} points`;
+        list.appendChild(li);
+      });
+    }
+
+    document.getElementById('shout-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      shoutOuts.push({
+        from: currentUser.name,
+        to: document.getElementById('shoutout-to').value,
+        category: document.getElementById('category').value,
+        msg: document.getElementById('message').value,
+        reactions: { party: 0, clap: 0, star: 0, heart: 0 }
+      });
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      saveData();
+      renderShoutOuts();
+      renderLeaderboard();
+      this.reset();
+    });
+
+    function reactShout(index, type) {
+      if (!shoutOuts[index].reactions) {
+        shoutOuts[index].reactions = { party: 0, clap: 0, star: 0, heart: 0 };
+      }
+      shoutOuts[index].reactions[type] = (shoutOuts[index].reactions[type] || 0) + 1;
+      saveData();
+      renderShoutOuts();
+      renderLeaderboard();
+    }
+
+    function deleteShout(index) {
+      if (confirm('Delete this shout-out?')) {
+        shoutOuts.splice(index, 1);
+        saveData();
+        renderShoutOuts();
+        renderLeaderboard();
+      }
+    }
+
+    // Initial Load
+    checkAuthStatus();
+  </script>
+
+</body>
+</html>
